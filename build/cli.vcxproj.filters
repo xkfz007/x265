@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="input">
+      <UniqueIdentifier>{22a34829-5293-4a80-8fe2-be7ccb238f76}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="output">
+      <UniqueIdentifier>{5d0b128c-03b3-48c1-a642-e625f0ba0469}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="compat">
+      <UniqueIdentifier>{5532276e-8e34-4ba7-9cb3-ed7d8d521837}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\source\input\input.cpp">
+      <Filter>input</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\input\y4m.cpp">
+      <Filter>input</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\input\yuv.cpp">
+      <Filter>input</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\output\output.cpp">
+      <Filter>output</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\output\raw.cpp">
+      <Filter>output</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\output\reconplay.cpp">
+      <Filter>output</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\output\y4m.cpp">
+      <Filter>output</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\output\yuv.cpp">
+      <Filter>output</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\compat\getopt\getopt.c">
+      <Filter>compat</Filter>
+    </ClCompile>
+    <ClCompile Include="..\source\x265-extras.cpp" />
+    <ClCompile Include="..\source\x265.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\source\input\input.h">
+      <Filter>input</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\input\y4m.h">
+      <Filter>input</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\input\yuv.h">
+      <Filter>input</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\output\output.h">
+      <Filter>output</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\output\raw.h">
+      <Filter>output</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\output\reconplay.h">
+      <Filter>output</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\output\y4m.h">
+      <Filter>output</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\output\yuv.h">
+      <Filter>output</Filter>
+    </ClInclude>
+    <ClInclude Include="..\source\x265-extras.h" />
+  </ItemGroup>
+</Project>

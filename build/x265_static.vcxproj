@@ -1,0 +1,227 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{4D52CB0E-B80F-4659-9220-AB8B5E4A27EF}</ProjectGuid>
+    <RootNamespace>x265_static_vc9</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\..\bin\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)\$(Configuration)\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)\..\bin\vc9\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)\vc9\$(Configuration)\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>..\source\;..\source\compat\msvc;.;..\source\common\;..\source\encoder\;..\source\compat\getopt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;X265_ARCH_X86=1;_CRT_SECURE_NO_WARNINGS;HIGH_BIT_DEPTH=0;X265_DEPTH=8;EXPORT_C_API=1;X265_NS=x265;_WIN32_WINNT=_WIN32_WINNT_WIN7;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <ObjectFileName>$(IntDir)\obj\%(RelativeDir)\%(FileName).obj</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <CompileAs>CompileAsCpp</CompileAs>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <SubSystem>Console</SubSystem>
+      <ImportLibrary>
+      </ImportLibrary>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>..\source\;..\extras;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <ObjectFileName>$(IntDir)$(ProjectFileName)/%(Filename).obj</ObjectFileName>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)$(TargetName).pdb</ProgramDatabaseFile>
+      <SubSystem>Console</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <ImportLibrary>
+      </ImportLibrary>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\source\common\bitstream.cpp" />
+    <ClCompile Include="..\source\common\common.cpp" />
+    <ClCompile Include="..\source\common\constants.cpp" />
+    <ClCompile Include="..\source\common\cpu.cpp" />
+    <ClCompile Include="..\source\common\cudata.cpp" />
+    <ClCompile Include="..\source\common\dct.cpp" />
+    <ClCompile Include="..\source\common\deblock.cpp" />
+    <ClCompile Include="..\source\common\frame.cpp" />
+    <ClCompile Include="..\source\common\framedata.cpp" />
+    <ClCompile Include="..\source\common\intrapred.cpp" />
+    <ClCompile Include="..\source\common\ipfilter.cpp" />
+    <ClCompile Include="..\source\common\loopfilter.cpp" />
+    <ClCompile Include="..\source\common\lowres.cpp" />
+    <ClCompile Include="..\source\common\md5.cpp" />
+    <ClCompile Include="..\source\common\param.cpp" />
+    <ClCompile Include="..\source\common\piclist.cpp" />
+    <ClCompile Include="..\source\common\picyuv.cpp" />
+    <ClCompile Include="..\source\common\pixel.cpp" />
+    <ClCompile Include="..\source\common\predict.cpp" />
+    <ClCompile Include="..\source\common\primitives.cpp" />
+    <ClCompile Include="..\source\common\quant.cpp" />
+    <ClCompile Include="..\source\common\scalinglist.cpp" />
+    <ClCompile Include="..\source\common\shortyuv.cpp" />
+    <ClCompile Include="..\source\common\slice.cpp" />
+    <ClCompile Include="..\source\common\threading.cpp" />
+    <ClCompile Include="..\source\common\threadpool.cpp" />
+    <ClCompile Include="..\source\common\version.cpp" />
+    <ClCompile Include="..\source\common\wavefront.cpp" />
+    <ClCompile Include="..\source\common\winxp.cpp" />
+    <ClCompile Include="..\source\common\yuv.cpp" />
+    <ClCompile Include="..\source\compat\getopt\getopt.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">HAVE_STRING_H=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="..\source\encoder\analysis.cpp" />
+    <ClCompile Include="..\source\encoder\api.cpp" />
+    <ClCompile Include="..\source\encoder\bitcost.cpp" />
+    <ClCompile Include="..\source\encoder\dpb.cpp" />
+    <ClCompile Include="..\source\encoder\encoder.cpp" />
+    <ClCompile Include="..\source\encoder\entropy.cpp" />
+    <ClCompile Include="..\source\encoder\frameencoder.cpp" />
+    <ClCompile Include="..\source\encoder\framefilter.cpp" />
+    <ClCompile Include="..\source\encoder\level.cpp" />
+    <ClCompile Include="..\source\encoder\motion.cpp" />
+    <ClCompile Include="..\source\encoder\nal.cpp" />
+    <ClCompile Include="..\source\encoder\ratecontrol.cpp" />
+    <ClCompile Include="..\source\encoder\reference.cpp" />
+    <ClCompile Include="..\source\encoder\sao.cpp" />
+    <ClCompile Include="..\source\encoder\search.cpp" />
+    <ClCompile Include="..\source\encoder\sei.cpp" />
+    <ClCompile Include="..\source\encoder\slicetype.cpp" />
+    <ClCompile Include="..\source\encoder\weightPrediction.cpp" />
+    <ClCompile Include="..\source\input\input.cpp" />
+    <ClCompile Include="..\source\input\y4m.cpp" />
+    <ClCompile Include="..\source\input\yuv.cpp" />
+    <ClCompile Include="..\source\output\output.cpp" />
+    <ClCompile Include="..\source\output\raw.cpp" />
+    <ClCompile Include="..\source\output\reconplay.cpp" />
+    <ClCompile Include="..\source\output\y4m.cpp" />
+    <ClCompile Include="..\source\output\yuv.cpp" />
+    <ClCompile Include="..\source\x265-extras.cpp" />
+    <ClCompile Include="..\source\x265.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\source\common\bitstream.h" />
+    <ClInclude Include="..\source\common\common.h" />
+    <ClInclude Include="..\source\common\constants.h" />
+    <ClInclude Include="..\source\common\contexts.h" />
+    <ClInclude Include="..\source\common\cpu.h" />
+    <ClInclude Include="..\source\common\cudata.h" />
+    <ClInclude Include="..\source\common\deblock.h" />
+    <ClInclude Include="..\source\common\frame.h" />
+    <ClInclude Include="..\source\common\framedata.h" />
+    <ClInclude Include="..\source\common\lowres.h" />
+    <ClInclude Include="..\source\common\md5.h" />
+    <ClInclude Include="..\source\common\mv.h" />
+    <ClInclude Include="..\source\common\param.h" />
+    <ClInclude Include="..\source\common\piclist.h" />
+    <ClInclude Include="..\source\common\picyuv.h" />
+    <ClInclude Include="..\source\common\predict.h" />
+    <ClInclude Include="..\source\common\primitives.h" />
+    <ClInclude Include="..\source\common\quant.h" />
+    <ClInclude Include="..\source\common\scalinglist.h" />
+    <ClInclude Include="..\source\common\shortyuv.h" />
+    <ClInclude Include="..\source\common\slice.h" />
+    <ClInclude Include="..\source\common\threading.h" />
+    <ClInclude Include="..\source\common\threadpool.h" />
+    <ClInclude Include="..\source\common\wavefront.h" />
+    <ClInclude Include="..\source\common\winxp.h" />
+    <ClInclude Include="..\source\common\yuv.h" />
+    <ClInclude Include="..\source\encoder\analysis.h" />
+    <ClInclude Include="..\source\encoder\bitcost.h" />
+    <ClInclude Include="..\source\encoder\dpb.h" />
+    <ClInclude Include="..\source\encoder\encoder.h" />
+    <ClInclude Include="..\source\encoder\entropy.h" />
+    <ClInclude Include="..\source\encoder\frameencoder.h" />
+    <ClInclude Include="..\source\encoder\framefilter.h" />
+    <ClInclude Include="..\source\encoder\level.h" />
+    <ClInclude Include="..\source\encoder\motion.h" />
+    <ClInclude Include="..\source\encoder\nal.h" />
+    <ClInclude Include="..\source\encoder\ratecontrol.h" />
+    <ClInclude Include="..\source\encoder\rdcost.h" />
+    <ClInclude Include="..\source\encoder\reference.h" />
+    <ClInclude Include="..\source\encoder\sao.h" />
+    <ClInclude Include="..\source\encoder\search.h" />
+    <ClInclude Include="..\source\encoder\sei.h" />
+    <ClInclude Include="..\source\encoder\slicetype.h" />
+    <ClInclude Include="..\source\input\input.h" />
+    <ClInclude Include="..\source\input\y4m.h" />
+    <ClInclude Include="..\source\input\yuv.h" />
+    <ClInclude Include="..\source\output\output.h" />
+    <ClInclude Include="..\source\output\raw.h" />
+    <ClInclude Include="..\source\output\reconplay.h" />
+    <ClInclude Include="..\source\output\y4m.h" />
+    <ClInclude Include="..\source\output\yuv.h" />
+    <ClInclude Include="..\source\x265-extras.h" />
+    <ClInclude Include="..\source\x265.h" />
+    <ClInclude Include="x265_config.h" />
+    <ClInclude Include="..\source\x265cli.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
