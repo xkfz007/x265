@@ -662,7 +662,7 @@ the prediction quad-tree.
 	and less frame parallelism as well. Because of this the faster
 	presets use a CU size of 32. Default: 64
 
-.. option:: --min-cu-size <64|32|16|8>
+.. option:: --min-cu-size <32|16|8>
 
 	Minimum CU size (width and height). By using 16 or 32 the encoder
 	will not analyze the cost of CUs below that minimum threshold,
@@ -869,13 +869,21 @@ as the residual quad-tree (RQT).
 	partitions, in which case a TU split is implied and thus the
 	residual quad-tree begins one layer below the CU quad-tree.
 
-.. option:: --limit-tu <0|1|2>
+.. option:: --limit-tu <0..4>
 
 	Enables early exit from TU depth recursion, for inter coded blocks.
 	Level 1 - decides to recurse to next higher depth based on cost 
 	comparison of full size TU and split TU.
+	
 	Level 2 - based on first split subTU's depth, limits recursion of
 	other split subTUs.
+	
+	Level 3 - based on the average depth of the co-located and the neighbor
+	CUs' TU depth, limits recursion of the current CU.
+	
+	Level 4 - uses the depth of the neighbouring/ co-located CUs TU depth 
+	to limit the 1st subTU depth. The 1st subTU depth is taken as the 
+	limiting depth for the other subTUs.
 
 	Default: 0
 
@@ -959,13 +967,17 @@ Temporal / motion search options
 	encoder: a star-pattern search followed by an optional radix scan
 	followed by an optional star-search refinement. Full is an
 	exhaustive search; an order of magnitude slower than all other
-	searches but not much better than umh or star.
+	searches but not much better than umh or star. SEA is similar to
+	FULL search; a three step motion search adopted from x264: DC 
+	calculation followed by ADS calculation followed by SAD of the
+	passed motion vector candidates, hence faster than Full search. 
 
 	0. dia
 	1. hex **(default)**
 	2. umh
 	3. star
-	4. full
+	4. sea
+	5. full
 
 .. option:: --subme, -m <0..7>
 
@@ -1215,8 +1227,18 @@ Slice decision options
     Default: 8 for ultrafast, superfast, faster, fast, medium
              4 for slow, slower
              disabled for veryslow, slower
+			 
+.. option:: --lookahead-threads <integer>
 
+    Use multiple worker threads dedicated to doing only lookahead instead of sharing
+    the worker threads with frame Encoders. A dedicated lookahead threadpool is created with the
+    specified number of worker threads. This can range from 0 upto half the
+    hardware threads available for encoding. Using too many threads for lookahead can starve
+    resources for frame Encoder and can harm performance. Default is 0 - disabled, Lookahead 
+	shares worker threads with other FrameEncoders . 
 
+    **Values:** 0 - disabled(default). Max - Half of available hardware threads.
+	
 .. option:: --b-adapt <integer>
 
 	Set the level of effort in determining B frame placement.
@@ -1321,7 +1343,7 @@ Quality, rate control and rate distortion options
 	slices using param->rc.ipFactor and param->rc.pbFactor unless QP 0
 	is specified, in which case QP 0 is used for all slice types.  Note
 	that QP 0 does not cause lossless encoding, it only disables
-	quantization. Default disabled (CRF)
+	quantization. Default disabled.
 
 	**Range of values:** an integer from 0 to 51
 
@@ -1415,6 +1437,23 @@ Quality, rate control and rate distortion options
 	* :option:`--me` = DIA
 	* :option:`--subme` = MIN(2, :option:`--subme`)
 	* :option:`--rd` = MIN(2, :option:`--rd`)
+
+.. option:: --multi-pass-opt-analysis, --no-multi-pass-opt-analysis
+
+    Enable/Disable multipass analysis refinement along with multipass ratecontrol. Based on 
+    the information stored in pass 1, in subsequent passes analysis data is refined 
+    and also redundant steps are skipped.
+    In pass 1 analysis information like motion vector, depth, reference and prediction
+    modes of the final best CTU partition is stored for each CTU.
+    Default disabled.
+
+.. option:: --multi-pass-opt-distortion, --no-multi-pass-opt-distortion
+
+    Enable/Disable multipass refinement of qp based on distortion data along with multipass
+    ratecontrol. In pass 1 distortion of best CTU partition is stored. CTUs with high
+    distortion get lower(negative)qp offsets and vice-versa for low distortion CTUs in pass 2.
+    This helps to improve the subjective quality.
+    Default disabled.
 
 .. option:: --strict-cbr, --no-strict-cbr
 	
@@ -1871,7 +1910,14 @@ Bitstream options
 
 .. option:: --[no-]multi-pass-opt-rps
 
-	Enable storing commonly RPS in SPS in multi pass mode. Default disabled.
+	Enable storing commonly used RPS in SPS in multi pass mode. Default disabled.
+
+.. option:: --[no-]opt-cu-delta-qp
+
+	Optimize CU level QPs by pulling up lower QPs to value close to meanQP thereby
+	minimizing fluctuations in deltaQP signalling. Default disabled.
+
+	Only effective at RD levels 5 and 6
 
 
 Debugging options

@@ -151,6 +151,9 @@ public:
     double         m_rateFactor; /* calculated based on the Frame QP */
     int            m_picCsp;
 
+    uint32_t*              m_meIntegral[INTEGRAL_PLANE_NUM];       // 12 integral planes for 32x32, 32x24, 32x8, 24x32, 16x16, 16x12, 16x4, 12x16, 8x32, 8x8, 4x16 and 4x4.
+    uint32_t*              m_meBuffer[INTEGRAL_PLANE_NUM];
+
     FrameData();
 
     bool create(const x265_param& param, const SPS& sps, int csp);
@@ -178,5 +181,24 @@ struct analysis_inter_data
     uint8_t*    partSize;
     uint8_t*    mergeFlag;
 };
+
+struct analysis2PassFrameData
+{
+    uint8_t*      depth;
+    MV*           m_mv[2];
+    int*          mvpIdx[2];
+    int32_t*      ref[2];
+    uint8_t*      modes;
+    sse_t*        distortion;
+    sse_t*        ctuDistortion;
+    double*       scaledDistortion;
+    double        averageDistortion;
+    double        sdDistortion;
+    uint32_t      highDistortionCtuCount;
+    uint32_t      lowDistortionCtuCount;
+    double*       offset;
+    double*       threshold;
+};
+
 }
 #endif // ifndef X265_FRAMEDATA_H

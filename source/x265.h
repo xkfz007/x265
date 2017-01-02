@@ -115,6 +115,14 @@ typedef struct x265_cu_stats
     /* All the above values will add up to 100%. */
 } x265_cu_stats;
 
+
+typedef struct x265_analysis_2Pass
+{
+    uint32_t      poc;
+    uint32_t      frameRecordSize;
+    void*         analysisFramedata;
+}x265_analysis_2Pass;
+
 /* Frame level statistics */
 typedef struct x265_frame_stats
 {
@@ -282,6 +290,8 @@ typedef struct x265_picture
     uint64_t framesize;
 
     int    height;
+
+    x265_analysis_2Pass analysis2Pass;
 } x265_picture;
 
 typedef enum
@@ -290,6 +300,7 @@ typedef enum
     X265_HEX_SEARCH,
     X265_UMH_SEARCH,
     X265_STAR_SEARCH,
+    X265_SEA,
     X265_FULL_SEARCH
 } X265_ME_METHODS;
 
@@ -357,6 +368,7 @@ typedef enum
 
 #define X265_TU_LIMIT_BFS       1
 #define X265_TU_LIMIT_DFS       2
+#define X265_TU_LIMIT_NEIGH     4
 
 #define X265_BFRAME_MAX         16
 #define X265_MAX_FRAME_THREADS  16
@@ -463,7 +475,7 @@ typedef struct x265_stats
 } x265_stats;
 
 /* String values accepted by x265_param_parse() (and CLI) for various parameters */
-static const char * const x265_motion_est_names[] = { "dia", "hex", "umh", "star", "full", 0 };
+static const char * const x265_motion_est_names[] = { "dia", "hex", "umh", "star", "sea", "full", 0 };
 static const char * const x265_source_csp_names[] = { "i400", "i420", "i422", "i444", "nv12", "nv16", 0 };
 static const char * const x265_video_format_names[] = { "component", "pal", "ntsc", "secam", "mac", "undef", 0 };
 static const char * const x265_fullrange_names[] = { "limited", "full", 0 };
@@ -909,9 +921,9 @@ typedef struct x265_param
     /* Limit modes analyzed for each CU using cost metrics from the 4 sub-CUs */
     uint32_t limitModes;
 
-    /* ME search method (DIA, HEX, UMH, STAR, FULL). The search patterns
+    /* ME search method (DIA, HEX, UMH, STAR, SEA, FULL). The search patterns
      * (methods) are sorted in increasing complexity, with diamond being the
-     * simplest and fastest and full being the slowest.  DIA, HEX, and UMH were
+     * simplest and fastest and full being the slowest.  DIA, HEX, UMH and SEA were
      * adapted from x264 directly. STAR is an adaption of the HEVC reference
      * encoder's three step search, while full is a naive exhaustive search. The
      * default is the star search, it has a good balance of performance and
@@ -1333,6 +1345,21 @@ typedef struct x265_param
     * intra cost of a frame used in scenecut detection. Default 5. */
     double     scenecutBias;
 
+    /* Use multiple worker threads dedicated to doing only lookahead instead of sharing
+    * the worker threads with Frame Encoders. A dedicated lookahead threadpool is created with the
+    * specified number of worker threads. This can range from 0 upto half the
+    * hardware threads available for encoding. Using too many threads for lookahead can starve
+    * resources for frame Encoder and can harm performance. Default is 0 - disabled. */
+    int       lookaheadThreads;
+
+    /* Optimize CU level QPs to signal consistent deltaQPs in frame for rd level > 4 */
+    int        bOptCUDeltaQP;
+
+    /* Refine analysis in multipass ratecontrol based on analysis information stored */
+    int         analysisMultiPassRefine;
+
+    /* Refine analysis in multipass ratecontrol based on distortion data stored */
+    int         analysisMultiPassDistortion;
 } x265_param;
 
 /* x265_param_alloc:

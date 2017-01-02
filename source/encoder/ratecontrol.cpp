@@ -433,7 +433,7 @@ bool RateControl::init(const SPS& sps)
                 }
                 *statsIn = '\0';
                 statsIn++;
-                if (sscanf(opts, "#options: %dx%d", &i, &j) != 2)
+                if ((p = strstr(opts, " input-res=")) == 0 || sscanf(p, " input-res=%dx%d", &i, &j) != 2)
                 {
                     x265_log(m_param, X265_LOG_ERROR, "Resolution specified in stats file not valid\n");
                     return false;
@@ -454,12 +454,34 @@ bool RateControl::init(const SPS& sps)
                               m_param->fpsNum, m_param->fpsDenom, k, l);
                     return false;
                 }
+                if (m_param->analysisMultiPassRefine)
+                {
+                    p = strstr(opts, "ref=");
+                    sscanf(p, "ref=%d", &i);
+                    if (i > m_param->maxNumReferences)
+                    {
+                        x265_log(m_param, X265_LOG_ERROR, "maxNumReferences cannot be less than 1st pass (%d vs %d)\n",
+                            i, m_param->maxNumReferences);
+                        return false;
+                    }
+                }
+                if (m_param->analysisMultiPassRefine || m_param->analysisMultiPassDistortion)
+                {
+                    p = strstr(opts, "ctu=");
+                    sscanf(p, "ctu=%u", &k);
+                    if (k != m_param->maxCUSize)
+                    {
+                        x265_log(m_param, X265_LOG_ERROR, "maxCUSize mismatch with 1st pass (%u vs %u)\n",
+                            k, m_param->maxCUSize);
+                        return false;
+                    }
+                }
                 CMP_OPT_FIRST_PASS("bitdepth", m_param->internalBitDepth);
                 CMP_OPT_FIRST_PASS("weightp", m_param->bEnableWeightedPred);
                 CMP_OPT_FIRST_PASS("bframes", m_param->bframes);
                 CMP_OPT_FIRST_PASS("b-pyramid", m_param->bBPyramid);
                 CMP_OPT_FIRST_PASS("open-gop", m_param->bOpenGOP);
-                CMP_OPT_FIRST_PASS("keyint", m_param->keyframeMax);
+                CMP_OPT_FIRST_PASS(" keyint", m_param->keyframeMax);
                 CMP_OPT_FIRST_PASS("scenecut", m_param->scenecutThreshold);
                 CMP_OPT_FIRST_PASS("intra-refresh", m_param->bIntraRefresh);
                 if (m_param->bMultiPassOptRPS)
@@ -623,7 +645,7 @@ bool RateControl::init(const SPS& sps)
                 x265_log_file(m_param, X265_LOG_ERROR, "can't open stats file %s.temp\n", fileName);
                 return false;
             }
-            p = x265_param2string(m_param);
+            p = x265_param2string(m_param, sps.conformanceWindow.rightOffset, sps.conformanceWindow.bottomOffset);
             if (p)
                 fprintf(m_statFileOut, "#options: %s\n", p);
             X265_FREE(p);
@@ -1674,15 +1696,18 @@ double RateControl::rateEstimateQscale(Frame* curFrame, RateControlEntry *rce)
                 if (m_pred[m_predType].count == 1)
                     qScale = x265_clip3(lmin, lmax, qScale);
                 m_lastQScaleFor[m_sliceType] = qScale;
-                rce->frameSizePlanned = predictSize(&m_pred[m_predType], qScale, (double)m_currentSatd);
             }
-            else
-                rce->frameSizePlanned = qScale2bits(rce, qScale);
-
-            /* Limit planned size by MinCR */
-            rce->frameSizePlanned = X265_MIN(rce->frameSizePlanned, rce->frameSizeMaximum);
-            rce->frameSizeEstimated = rce->frameSizePlanned;
         }
+
+        if (m_2pass)
+            rce->frameSizePlanned = qScale2bits(rce, qScale);
+        else
+            rce->frameSizePlanned = predictSize(&m_pred[m_predType], qScale, (double)m_currentSatd);
+
+        /* Limit planned size by MinCR */
+        if (m_isVbv)
+            rce->frameSizePlanned = X265_MIN(rce->frameSizePlanned, rce->frameSizeMaximum);
+        rce->frameSizeEstimated = rce->frameSizePlanned;
 
         rce->newQScale = qScale;
         if(rce->bLastMiniGopBFrame)
@@ -1900,7 +1925,7 @@ double RateControl::rateEstimateQscale(Frame* curFrame, RateControlEntry *rce)
         if ((m_curSlice->m_poc == 0 || m_lastQScaleFor[P_SLICE] < q) && !(m_2pass && !m_isVbv))
             m_lastQScaleFor[P_SLICE] = q * fabs(m_param->rc.ipFactor);
 
-        if (m_2pass && m_isVbv)
+        if (m_2pass)
             rce->frameSizePlanned = qScale2bits(rce, q);
         else
             rce->frameSizePlanned = predictSize(&m_pred[m_predType], q, (double)m_currentSatd);

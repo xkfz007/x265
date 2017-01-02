@@ -67,7 +67,7 @@ Search::Search()
     m_param = NULL;
     m_slice = NULL;
     m_frame = NULL;
-    m_maxTUDepth = 0;
+    m_maxTUDepth = -1;
 }
 
 bool Search::initSearch(const x265_param& param, ScalingList& scalingList)
@@ -93,6 +93,19 @@ bool Search::initSearch(const x265_param& param, ScalingList& scalingList)
     uint32_t sizeL = 1 << (maxLog2CUSize * 2);
     uint32_t sizeC = sizeL >> (m_hChromaShift + m_vChromaShift);
     uint32_t numPartitions = 1 << (maxLog2CUSize - LOG2_UNIT_SIZE) * 2;
+
+    m_limitTU = 0;
+    if (m_param->limitTU)
+    {
+        if (m_param->limitTU == 1)
+            m_limitTU = X265_TU_LIMIT_BFS;
+        else if (m_param->limitTU == 2)
+            m_limitTU = X265_TU_LIMIT_DFS;
+        else if (m_param->limitTU == 3)
+            m_limitTU = X265_TU_LIMIT_NEIGH;
+        else if (m_param->limitTU == 4)
+            m_limitTU = X265_TU_LIMIT_DFS + X265_TU_LIMIT_NEIGH;
+    }
 
     /* these are indexed by qtLayer (log2size - 2) so nominally 0=4x4, 1=8x8, 2=16x16, 3=32x32
      * the coeffRQT and reconQtYuv are allocated to the max CU size at every depth. The parts
@@ -1194,7 +1207,7 @@ void Search::checkIntra(Mode& intraMode, const CUGeom& cuGeom, PartSize partSize
     }
     else
         intraMode.distortion += intraMode.lumaDistortion;
-
+    cu.m_distortion[0] = intraMode.distortion;
     m_entropyCoder.resetBits();
     if (m_slice->m_pps->bTransquantBypassEnabled)
         m_entropyCoder.codeCUTransquantBypassFlag(cu.m_tqBypass[0]);
@@ -2115,7 +2128,7 @@ void Search::predInterSearch(Mode& interMode, const CUGeom& cuGeom, bool bChroma
         cu.getNeighbourMV(puIdx, pu.puAbsPartIdx, interMode.interNeighbours);
 
         /* Uni-directional prediction */
-        if (m_param->analysisMode == X265_ANALYSIS_LOAD)
+        if (m_param->analysisMode == X265_ANALYSIS_LOAD || (m_param->analysisMultiPassRefine && m_param->rc.bStatRead))
         {
             for (int list = 0; list < numPredDir; list++)
             {
@@ -2132,8 +2145,19 @@ void Search::predInterSearch(Mode& interMode, const CUGeom& cuGeom, bool bChroma
                 int mvpIdx = selectMVP(cu, pu, amvp, list, ref);
                 MV mvmin, mvmax, outmv, mvp = amvp[mvpIdx];
 
+                if (m_param->searchMethod == X265_SEA)
+                {
+                    int puX = puIdx & 1;
+                    int puY = puIdx >> 1;
+                    for (int planes = 0; planes < INTEGRAL_PLANE_NUM; planes++)
+                        m_me.integral[planes] = interMode.fencYuv->m_integral[list][ref][planes] + puX * pu.width + puY * pu.height * m_slice->m_refFrameList[list][ref]->m_reconPic->m_stride;
+                }
                 setSearchRange(cu, mvp, m_param->searchRange, mvmin, mvmax);
-                int satdCost = m_me.motionEstimate(&slice->m_mref[list][ref], mvmin, mvmax, mvp, numMvc, mvc, m_param->searchRange, outmv,
+                MV mvpIn = mvp;
+                if (m_param->analysisMultiPassRefine && m_param->rc.bStatRead && mvpIdx == bestME[list].mvpIdx)
+                    mvpIn = bestME[list].mv;
+                    
+                int satdCost = m_me.motionEstimate(&slice->m_mref[list][ref], mvmin, mvmax, mvpIn, numMvc, mvc, m_param->searchRange, outmv,
                   m_param->bSourceReferenceEstimation ? m_slice->m_refFrameList[list][ref]->m_fencPic->getLumaAddr(0) : 0);
 
                 /* Get total cost of partition, but only include MV bit cost once */
@@ -2142,7 +2166,22 @@ void Search::predInterSearch(Mode& interMode, const CUGeom& cuGeom, bool bChroma
                 uint32_t cost = (satdCost - mvCost) + m_rdCost.getCost(bits);
 
                 /* Refine MVP selection, updates: mvpIdx, bits, cost */
-                mvp = checkBestMVP(amvp, outmv, mvpIdx, bits, cost);
+                if (!m_param->analysisMultiPassRefine)
+                    mvp = checkBestMVP(amvp, outmv, mvpIdx, bits, cost);
+                else
+                {
+                    /* It is more accurate to compare with actual mvp that was used in motionestimate than amvp[mvpIdx]. Here 
+                      the actual mvp is bestME from pass 1 for that mvpIdx */
+                    int diffBits = m_me.bitcost(outmv, amvp[!mvpIdx]) - m_me.bitcost(outmv, mvpIn);
+                    if (diffBits < 0)
+                    {
+                        mvpIdx = !mvpIdx;
+                        uint32_t origOutBits = bits;
+                        bits = origOutBits + diffBits;
+                        cost = (cost - m_rdCost.getCost(origOutBits)) + m_rdCost.getCost(bits);
+                    }
+                    mvp = amvp[mvpIdx];
+                }
 
                 if (cost < bestME[list].cost)
                 {
@@ -2230,7 +2269,13 @@ void Search::predInterSearch(Mode& interMode, const CUGeom& cuGeom, bool bChroma
                         if (lmv.notZero())
                             mvc[numMvc++] = lmv;
                     }
-
+                    if (m_param->searchMethod == X265_SEA)
+                    {
+                        int puX = puIdx & 1;
+                        int puY = puIdx >> 1;
+                        for (int planes = 0; planes < INTEGRAL_PLANE_NUM; planes++)
+                            m_me.integral[planes] = interMode.fencYuv->m_integral[list][ref][planes] + puX * pu.width + puY * pu.height * m_slice->m_refFrameList[list][ref]->m_reconPic->m_stride;
+                    }
                     setSearchRange(cu, mvp, m_param->searchRange, mvmin, mvmax);
                     int satdCost = m_me.motionEstimate(&slice->m_mref[list][ref], mvmin, mvmax, mvp, numMvc, mvc, m_param->searchRange, outmv, 
                       m_param->bSourceReferenceEstimation ? m_slice->m_refFrameList[list][ref]->m_fencPic->getLumaAddr(0) : 0);
@@ -2579,6 +2624,7 @@ void Search::encodeResAndCalcRdSkipCU(Mode& interMode)
         interMode.chromaDistortion += m_rdCost.scaleChromaDist(2, primitives.chroma[m_csp].cu[part].sse_pp(fencYuv->m_buf[2], fencYuv->m_csize, reconYuv->m_buf[2], reconYuv->m_csize));
         interMode.distortion += interMode.chromaDistortion;
     }
+    cu.m_distortion[0] = interMode.distortion;
     m_entropyCoder.load(m_rqt[depth].cur);
     m_entropyCoder.resetBits();
     if (m_slice->m_pps->bTransquantBypassEnabled)
@@ -2621,13 +2667,29 @@ void Search::encodeResAndCalcRdInterCU(Mode& interMode, const CUGeom& cuGeom)
 
     m_entropyCoder.load(m_rqt[depth].cur);
 
-    if (m_param->limitTU == X265_TU_LIMIT_DFS)
-        m_maxTUDepth = 0;
-    else if (m_param->limitTU == X265_TU_LIMIT_BFS)
+    if ((m_limitTU & X265_TU_LIMIT_DFS) && !(m_limitTU & X265_TU_LIMIT_NEIGH))
+        m_maxTUDepth = -1;
+    else if (m_limitTU & X265_TU_LIMIT_BFS)
         memset(&m_cacheTU, 0, sizeof(TUInfoCache));
 
     Cost costs;
-    estimateResidualQT(interMode, cuGeom, 0, 0, *resiYuv, costs, tuDepthRange);
+    if (m_limitTU & X265_TU_LIMIT_NEIGH)
+    {
+        /* Save and reload maxTUDepth to avoid changing of maxTUDepth between modes */
+        int32_t tempDepth = m_maxTUDepth;
+        if (m_maxTUDepth != -1)
+        {
+            uint32_t splitFlag = interMode.cu.m_partSize[0] != SIZE_2Nx2N;
+            uint32_t minSize = tuDepthRange[0];
+            uint32_t maxSize = tuDepthRange[1];
+            maxSize = X265_MIN(maxSize, cuGeom.log2CUSize - splitFlag);
+            m_maxTUDepth = x265_clip3(cuGeom.log2CUSize - maxSize, cuGeom.log2CUSize - minSize, (uint32_t)m_maxTUDepth);
+        }
+        estimateResidualQT(interMode, cuGeom, 0, 0, *resiYuv, costs, tuDepthRange);
+        m_maxTUDepth = tempDepth;
+    }
+    else
+        estimateResidualQT(interMode, cuGeom, 0, 0, *resiYuv, costs, tuDepthRange);
 
     uint32_t tqBypass = cu.m_tqBypass[0];
     if (!tqBypass)
@@ -2725,6 +2787,7 @@ void Search::encodeResAndCalcRdInterCU(Mode& interMode, const CUGeom& cuGeom)
     interMode.lumaDistortion = bestLumaDist;
     interMode.coeffBits = coeffBits;
     interMode.mvBits = mvBits;
+    cu.m_distortion[0] = interMode.distortion;
     updateModeCost(interMode);
     checkDQP(interMode, cuGeom);
 }
@@ -2886,10 +2949,11 @@ bool Search::splitTU(Mode& mode, const CUGeom& cuGeom, uint32_t absPartIdx, uint
     uint32_t ycbf = 0, ucbf = 0, vcbf = 0;
     for (uint32_t qIdx = 0, qPartIdx = absPartIdx; qIdx < 4; ++qIdx, qPartIdx += qNumParts)
     {
-        if (m_param->limitTU == X265_TU_LIMIT_DFS && tuDepth == 0 && qIdx == 1)
+        if ((m_limitTU & X265_TU_LIMIT_DFS) && tuDepth == 0 && qIdx == 1)
         {
+            m_maxTUDepth = cu.m_tuDepth[0];
             // Fetch maximum TU depth of first sub partition to limit recursion of others
-            for (uint32_t i = 0; i < cuGeom.numPartitions / 4; i++)
+            for (uint32_t i = 1; i < cuGeom.numPartitions / 4; i++)
                 m_maxTUDepth = X265_MAX(m_maxTUDepth, cu.m_tuDepth[i]);
         }
         estimateResidualQT(mode, cuGeom, qPartIdx, tuDepth + 1, resiYuv, splitCost, depthRange, splitMore);
@@ -2937,12 +3001,7 @@ void Search::estimateResidualQT(Mode& mode, const CUGeom& cuGeom, uint32_t absPa
     bool bSaveTUData = false, bLoadTUData = false;
     uint32_t idx = 0;
 
-    if (m_param->limitTU == X265_TU_LIMIT_DFS && m_maxTUDepth)
-    {
-        uint32_t log2MaxTrSize = cuGeom.log2CUSize - m_maxTUDepth;
-        bCheckSplit = log2TrSize > log2MaxTrSize;
-    }
-    else if (m_param->limitTU == X265_TU_LIMIT_BFS && splitMore >= 0)
+    if ((m_limitTU & X265_TU_LIMIT_BFS) && splitMore >= 0)
     {
         if (bCheckSplit && bCheckFull && tuDepth)
         {
@@ -2959,6 +3018,14 @@ void Search::estimateResidualQT(Mode& mode, const CUGeom& cuGeom, uint32_t absPa
                 bSaveTUData = true;
                 bCheckSplit = false;
             }
+        }
+    }
+    else if (m_limitTU & X265_TU_LIMIT_DFS || m_limitTU & X265_TU_LIMIT_NEIGH)
+    {
+        if (bCheckSplit && m_maxTUDepth >= 0)
+        {
+            uint32_t log2MaxTrSize = cuGeom.log2CUSize - m_maxTUDepth;
+            bCheckSplit = log2TrSize > log2MaxTrSize;
         }
     }
 
@@ -3488,7 +3555,7 @@ void Search::estimateResidualQT(Mode& mode, const CUGeom& cuGeom, uint32_t absPa
         {
             if (splitCost.rdcost < fullCost.rdcost)
             {
-                if (m_param->limitTU == X265_TU_LIMIT_BFS)
+                if (m_limitTU & X265_TU_LIMIT_BFS)
                 {
                     uint32_t nextlog2TrSize = cuGeom.log2CUSize - (tuDepth + 1);
                     bool nextSplit = nextlog2TrSize > depthRange[0];

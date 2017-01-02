@@ -116,6 +116,7 @@ public:
     void destroy();
 
     Mode& compressCTU(CUData& ctu, Frame& frame, const CUGeom& cuGeom, const Entropy& initialContext);
+    int32_t loadTUDepth(CUGeom cuGeom, CUData parentCTU);
 
 protected:
     /* Analysis data for save/load mode, writes/reads data based on absPartIdx */
@@ -129,6 +130,13 @@ protected:
     uint32_t             m_splitRefIdx[4];
     uint64_t*            cacheCost;
 
+
+    analysis2PassFrameData* m_multipassAnalysis;
+    uint8_t*                m_multipassDepth;
+    MV*                     m_multipassMv[2];
+    int*                    m_multipassMvpIdx[2];
+    int32_t*                m_multipassRef[2];
+    uint8_t*                m_multipassModes;
     /* refine RD based on QP for rd-levels 5 and 6 */
     void qprdRefine(const CUData& parentCTU, const CUGeom& cuGeom, int32_t qp, int32_t lqp);
 

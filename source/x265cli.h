@@ -125,6 +125,7 @@ static const struct option long_options[] =
     { "intra-refresh",        no_argument, NULL, 0 },
     { "rc-lookahead",   required_argument, NULL, 0 },
     { "lookahead-slices", required_argument, NULL, 0 },
+    { "lookahead-threads", required_argument, NULL, 0 },
     { "bframes",        required_argument, NULL, 'b' },
     { "bframe-bias",    required_argument, NULL, 0 },
     { "b-adapt",        required_argument, NULL, 0 },
@@ -218,6 +219,8 @@ static const struct option long_options[] =
     { "no-opt-qp-pps",        no_argument, NULL, 0 },
     { "opt-ref-list-length-pps",         no_argument, NULL, 0 },
     { "no-opt-ref-list-length-pps",      no_argument, NULL, 0 },
+    { "opt-cu-delta-qp",      no_argument, NULL, 0 },
+    { "no-opt-cu-delta-qp",   no_argument, NULL, 0 },
     { "no-dither",            no_argument, NULL, 0 },
     { "dither",               no_argument, NULL, 0 },
     { "no-repeat-headers",    no_argument, NULL, 0 },
@@ -235,6 +238,10 @@ static const struct option long_options[] =
     { "nr-inter",       required_argument, NULL, 0 },
     { "stats",          required_argument, NULL, 0 },
     { "pass",           required_argument, NULL, 0 },
+    { "multi-pass-opt-analysis", no_argument, NULL, 0 },
+    { "no-multi-pass-opt-analysis",    no_argument, NULL, 0 },
+    { "multi-pass-opt-distortion",     no_argument, NULL, 0 },
+    { "no-multi-pass-opt-distortion",  no_argument, NULL, 0 },
     { "slow-firstpass",       no_argument, NULL, 0 },
     { "no-slow-firstpass",    no_argument, NULL, 0 },
     { "multi-pass-opt-rps",   no_argument, NULL, 0 },
@@ -327,7 +334,7 @@ static void showHelp(x265_param *param)
     H0("   --max-tu-size <32|16|8|4>     Maximum TU size (WxH). Default %d\n", param->maxTUSize);
     H0("   --tu-intra-depth <integer>    Max TU recursive depth for intra CUs. Default %d\n", param->tuQTMaxIntraDepth);
     H0("   --tu-inter-depth <integer>    Max TU recursive depth for inter CUs. Default %d\n", param->tuQTMaxInterDepth);
-    H0("   --limit-tu <integer>          Enable early exit from TU recursion for inter coded blocks. Default %d\n", param->limitTU);
+    H0("   --limit-tu <0..4>             Enable early exit from TU recursion for inter coded blocks. Default %d\n", param->limitTU);
     H0("\nAnalysis:\n");
     H0("   --rd <1..6>                   Level of RDO in mode decision 1:least....6:full RDO. Default %d\n", param->rdLevel);
     H0("   --[no-]psy-rd <0..5.0>        Strength of psycho-visual rate distortion optimization, 0 to disable. Default %.1f\n", param->psyRd);
@@ -372,6 +379,7 @@ static void showHelp(x265_param *param)
     H0("   --intra-refresh               Use Periodic Intra Refresh instead of IDR frames\n");
     H0("   --rc-lookahead <integer>      Number of frames for frame-type lookahead (determines encoder latency) Default %d\n", param->lookaheadDepth);
     H1("   --lookahead-slices <0..16>    Number of slices to use per lookahead cost estimate. Default %d\n", param->lookaheadSlices);
+    H0("   --lookahead-threads <integer> Number of threads to be dedicated to perform lookahead only. Default %d\n", param->lookaheadThreads);
     H0("   --bframes <integer>           Maximum number of consecutive b-frames (now it only enables B GOP structure) Default %d\n", param->bframes);
     H1("   --bframe-bias <integer>       Bias towards B frame decisions. Default %d\n", param->bFrameBias);
     H0("   --b-adapt <0..2>              0 - none, 1 - fast, 2 - full (trellis) adaptive B frame scheduling. Default %d\n", param->bFrameAdaptive);
@@ -396,6 +404,8 @@ static void showHelp(x265_param *param)
        "                                   - 1 : First pass, creates stats file\n"
        "                                   - 2 : Last pass, does not overwrite stats file\n"
        "                                   - 3 : Nth pass, overwrites stats file\n");
+    H0("   --[no-]multi-pass-opt-analysis   Refine analysis in 2 pass based on analysis information from pass 1\n");
+    H0("   --[no-]multi-pass-opt-distortion Use distortion of CTU from pass 1 to refine qp in 2 pass\n");
     H0("   --stats                       Filename for stats file in multipass pass rate control. Default x265_2pass.log\n");
     H0("   --[no-]analyze-src-pics       Motion estimation uses source frame planes. Default disable\n");
     H0("   --[no-]slow-firstpass         Enable a slow first pass in a multipass rate control mode. Default %s\n", OPT(param->rc.bEnableSlowFirstPass));
@@ -464,7 +474,8 @@ static void showHelp(x265_param *param)
     H0("   --[no-]vui-hrd-info           Emit VUI HRD information in the bistream. Default %s\n", OPT(param->bEmitVUIHRDInfo));
     H0("   --[no-]opt-qp-pps             Dynamically optimize QP in PPS (instead of default 26) based on QPs in previous GOP. Default %s\n", OPT(param->bOptQpPPS));
     H0("   --[no-]opt-ref-list-length-pps  Dynamically set L0 and L1 ref list length in PPS (instead of default 0) based on values in last GOP. Default %s\n", OPT(param->bOptRefListLengthPPS));
-    H0("   --[no-]multi-pass-opt-rps     Enable storing commonly RPS in SPS in multi pass mode. Default %s\n", OPT(param->bMultiPassOptRPS));
+    H0("   --[no-]multi-pass-opt-rps     Enable storing commonly used RPS in SPS in multi pass mode. Default %s\n", OPT(param->bMultiPassOptRPS));
+    H0("   --[no-]opt-cu-delta-qp        Optimize to signal consistent CU level delta QPs in frame. Default %s\n", OPT(param->bOptCUDeltaQP));
     H1("\nReconstructed video options (debugging):\n");
     H1("-r/--recon <filename>            Reconstructed raw image YUV or Y4M output file name\n");
     H1("   --recon-depth <integer>       Bit-depth of reconstructed raw image file. Defaults to input bit depth, or 8 if Y4M\n");
